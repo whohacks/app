@@ -56,9 +56,7 @@ export const SettingsScreen = () => {
       | 'exchangeApiKey'
       | 'exchangeApiSecret'
       | 'telegramBotToken'
-      | 'telegramChatId'
-      | 'alertServerUrl'
-      | 'alertServerApiKey',
+      | 'telegramChatId',
     value: string
   ) => {
     dispatch({ type: 'UPSERT_SETTINGS', payload: { [key]: value } });
@@ -261,26 +259,6 @@ export const SettingsScreen = () => {
               onChangeText={(v) => updateSetting('telegramChatId', v.trim())}
               mode="outlined"
               autoCapitalize="none"
-              style={styles.input}
-            />
-            <TextInput
-              label="Alert Server URL (always-on)"
-              value={state.settings.alertServerUrl}
-              onChangeText={(v) => updateSetting('alertServerUrl', v.trim())}
-              mode="outlined"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="https://your-server.com"
-              style={styles.input}
-            />
-            <TextInput
-              label="Alert Server API Key"
-              value={state.settings.alertServerApiKey}
-              onChangeText={(v) => updateSetting('alertServerApiKey', v.trim())}
-              mode="outlined"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
               style={styles.input}
             />
             <View style={styles.actionRow}>
