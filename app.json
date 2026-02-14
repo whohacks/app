@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Trading Journal",
+    "slug": "trading-journal-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.tradingjournal",
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch"]
+      }
+    },
+    "android": {
+      "package": "com.example.tradingjournal",
+      "permissions": ["RECEIVE_BOOT_COMPLETED"]
+    },
+    "plugins": ["expo-secure-store", "expo-notifications"]
+  }
+}
