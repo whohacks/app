@@ -36,7 +36,8 @@ const defaultSettings: Settings = {
   exchangeApiSecret: '',
   telegramBotToken: '',
   telegramChatId: '',
-  alertServerUrl: ''
+  alertServerUrl: '',
+  alertServerApiKey: ''
 };
 
 const initialState: AppState = {

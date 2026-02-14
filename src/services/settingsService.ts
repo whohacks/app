@@ -7,7 +7,8 @@ const KEYS = {
   exchangeApiSecret: 'settings.exchangeApiSecret',
   telegramBotToken: 'settings.telegramBotToken',
   telegramChatId: 'settings.telegramChatId',
-  alertServerUrl: 'settings.alertServerUrl'
+  alertServerUrl: 'settings.alertServerUrl',
+  alertServerApiKey: 'settings.alertServerApiKey'
 } as const;
 
 export const saveSettingsSecure = async (settings: Settings): Promise<void> => {
@@ -17,18 +18,20 @@ export const saveSettingsSecure = async (settings: Settings): Promise<void> => {
     SecureStore.setItemAsync(KEYS.exchangeApiSecret, settings.exchangeApiSecret),
     SecureStore.setItemAsync(KEYS.telegramBotToken, settings.telegramBotToken),
     SecureStore.setItemAsync(KEYS.telegramChatId, settings.telegramChatId),
-    SecureStore.setItemAsync(KEYS.alertServerUrl, settings.alertServerUrl)
+    SecureStore.setItemAsync(KEYS.alertServerUrl, settings.alertServerUrl),
+    SecureStore.setItemAsync(KEYS.alertServerApiKey, settings.alertServerApiKey)
   ]);
 };
 
 export const loadSettingsSecure = async (): Promise<Settings> => {
-  const [exchange, exchangeApiKey, exchangeApiSecret, telegramBotToken, telegramChatId, alertServerUrl] = await Promise.all([
+  const [exchange, exchangeApiKey, exchangeApiSecret, telegramBotToken, telegramChatId, alertServerUrl, alertServerApiKey] = await Promise.all([
     SecureStore.getItemAsync(KEYS.exchange),
     SecureStore.getItemAsync(KEYS.exchangeApiKey),
     SecureStore.getItemAsync(KEYS.exchangeApiSecret),
     SecureStore.getItemAsync(KEYS.telegramBotToken),
     SecureStore.getItemAsync(KEYS.telegramChatId),
-    SecureStore.getItemAsync(KEYS.alertServerUrl)
+    SecureStore.getItemAsync(KEYS.alertServerUrl),
+    SecureStore.getItemAsync(KEYS.alertServerApiKey)
   ]);
 
   return {
@@ -37,7 +40,8 @@ export const loadSettingsSecure = async (): Promise<Settings> => {
     exchangeApiSecret: exchangeApiSecret ?? '',
     telegramBotToken: telegramBotToken ?? '',
     telegramChatId: telegramChatId ?? '',
-    alertServerUrl: alertServerUrl ?? ''
+    alertServerUrl: alertServerUrl ?? '',
+    alertServerApiKey: alertServerApiKey ?? ''
   };
 };
 

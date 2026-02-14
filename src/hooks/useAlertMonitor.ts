@@ -193,6 +193,7 @@ export const useAlertMonitor = () => {
   }, [
     state.alerts,
     state.settings.alertServerUrl,
+    state.settings.alertServerApiKey,
     state.settings.exchange,
     state.settings.telegramBotToken,
     state.settings.telegramChatId

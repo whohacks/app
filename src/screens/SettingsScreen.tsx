@@ -52,7 +52,13 @@ export const SettingsScreen = () => {
   const telegramStatus = getStatusMeta(telegramConnection.status, hasTelegramCreds);
 
   const updateSetting = (
-    key: 'exchangeApiKey' | 'exchangeApiSecret' | 'telegramBotToken' | 'telegramChatId' | 'alertServerUrl',
+    key:
+      | 'exchangeApiKey'
+      | 'exchangeApiSecret'
+      | 'telegramBotToken'
+      | 'telegramChatId'
+      | 'alertServerUrl'
+      | 'alertServerApiKey',
     value: string
   ) => {
     dispatch({ type: 'UPSERT_SETTINGS', payload: { [key]: value } });
@@ -265,6 +271,16 @@ export const SettingsScreen = () => {
               autoCapitalize="none"
               autoCorrect={false}
               placeholder="https://your-server.com"
+              style={styles.input}
+            />
+            <TextInput
+              label="Alert Server API Key"
+              value={state.settings.alertServerApiKey}
+              onChangeText={(v) => updateSetting('alertServerApiKey', v.trim())}
+              mode="outlined"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
               style={styles.input}
             />
             <View style={styles.actionRow}>

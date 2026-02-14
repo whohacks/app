@@ -154,6 +154,13 @@ export const JournalScreen = () => {
     setEditingTradeId(null);
   };
 
+  const onDeleteTrade = (tradeId: string) => {
+    dispatch({ type: 'DELETE_TRADE', payload: tradeId });
+    if (editingTradeId === tradeId) {
+      setEditingTradeId(null);
+    }
+  };
+
   return (
     <ScreenContainer>
       <ScrollView
@@ -246,19 +253,24 @@ export const JournalScreen = () => {
                 </View>
                 <Text style={[styles.tableCell, styles.colTradeCategory]}>{trade.category || 'Uncategorized'}</Text>
                 <View style={styles.colTradeAction}>
-                  <Menu
-                    visible={editingTradeId === trade.id}
-                    onDismiss={() => setEditingTradeId(null)}
-                    anchor={
-                      <Button compact mode="outlined" onPress={() => setEditingTradeId(trade.id)}>
-                        Change
-                      </Button>
-                    }
-                  >
-                    {state.categories.map((c) => (
-                      <Menu.Item key={`${trade.id}-${c}`} title={c} onPress={() => onSetTradeCategory(trade.id, c)} />
-                    ))}
-                  </Menu>
+                  <View style={styles.tradeActionRow}>
+                    <Menu
+                      visible={editingTradeId === trade.id}
+                      onDismiss={() => setEditingTradeId(null)}
+                      anchor={
+                        <Button compact mode="outlined" onPress={() => setEditingTradeId(trade.id)}>
+                          Change
+                        </Button>
+                      }
+                    >
+                      {state.categories.map((c) => (
+                        <Menu.Item key={`${trade.id}-${c}`} title={c} onPress={() => onSetTradeCategory(trade.id, c)} />
+                      ))}
+                    </Menu>
+                    <Button compact mode="text" textColor="#ef4444" onPress={() => onDeleteTrade(trade.id)}>
+                      Delete
+                    </Button>
+                  </View>
                 </View>
               </View>
             ))}
@@ -319,6 +331,7 @@ const styles = StyleSheet.create({
   colTradePnl: { flex: 1, alignItems: 'flex-end', paddingRight: 14 },
   colTradeCategory: { flex: 1.5, paddingLeft: 8 },
   colTradeAction: { flex: 1.1, alignItems: 'flex-end', paddingLeft: 10 },
+  tradeActionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   syncedAt: { marginTop: 8, color: '#94a3b8' },
   syncInfo: { marginTop: 6, color: '#22c55e' },
   error: { color: '#ef4444', marginTop: 8 }

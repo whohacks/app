@@ -36,6 +36,7 @@ export type Settings = {
   telegramBotToken: string;
   telegramChatId: string;
   alertServerUrl: string;
+  alertServerApiKey: string;
 };
 
 export type RunningTrade = {
