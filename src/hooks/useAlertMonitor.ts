@@ -5,7 +5,6 @@ import { evaluateAlerts } from '../services/alertService';
 import { ALERT_POLL_MS } from '../utils/constants';
 import { pushLocalNotification } from '../services/notificationService';
 import { sendTelegramMessage } from '../services/telegramService';
-import { syncRelayAlerts } from '../services/relayService';
 
 export const useAlertMonitor = () => {
   const { state, dispatch } = useAppContext();
@@ -181,21 +180,4 @@ export const useAlertMonitor = () => {
     };
   }, [dispatch, state.alerts, state.settings.exchange, state.settings.telegramBotToken, state.settings.telegramChatId]);
 
-  useEffect(() => {
-    const sync = async () => {
-      try {
-        await syncRelayAlerts(state.settings, state.alerts);
-      } catch {
-        // Keep app usable if relay is unavailable.
-      }
-    };
-    void sync();
-  }, [
-    state.alerts,
-    state.settings.alertServerUrl,
-    state.settings.alertServerApiKey,
-    state.settings.exchange,
-    state.settings.telegramBotToken,
-    state.settings.telegramChatId
-  ]);
 };

@@ -7,7 +7,7 @@ import { AppProvider, useAppContext } from './src/context/AppContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { requestNotificationPermission } from './src/services/notificationService';
 import { useAlertMonitor } from './src/hooks/useAlertMonitor';
-import { registerBackgroundAlertTask } from './src/services/backgroundAlertTask';
+import { unregisterBackgroundAlertTask } from './src/services/backgroundAlertTask';
 import { AuthScreen } from './src/screens/AuthScreen';
 
 const Bootstrap = () => {
@@ -18,7 +18,7 @@ const Bootstrap = () => {
   useEffect(() => {
     const bootstrap = async () => {
       await requestNotificationPermission();
-      await registerBackgroundAlertTask();
+      await unregisterBackgroundAlertTask();
     };
 
     bootstrap();
