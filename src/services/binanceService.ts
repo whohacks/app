@@ -28,21 +28,26 @@ const signBybitGet = (timestamp: string, apiKey: string, recvWindow: string, que
 };
 
 const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
-  const res = await fetch(url, init);
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try {
-      const payload = (await res.json()) as { msg?: string; message?: string };
-      message = payload.msg ?? payload.message ?? message;
-    } catch {
-      // Keep generic HTTP error.
+  try {
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      try {
+        const payload = (await res.json()) as { msg?: string; message?: string };
+        message = payload.msg ?? payload.message ?? message;
+      } catch {
+        // Keep generic HTTP error.
+      }
+      throw new Error(message);
     }
-    throw new Error(message);
+    return (await res.json()) as T;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Network request failed';
+    throw new Error(msg);
   }
-  return (await res.json()) as T;
 };
 
-const signedGet = async <T>(path: string, settings: Settings, params: SignedParams = {}): Promise<T> => {
+const signedGet = async <T>(path: string, settings: Settings, params: SignedParams = {}, signal?: AbortSignal): Promise<T> => {
   if (settings.exchange === 'bybit') {
     const baseUrl = getBaseUrl(settings.exchange);
     const query = buildQuery(params);
@@ -55,11 +60,12 @@ const signedGet = async <T>(path: string, settings: Settings, params: SignedPara
         'X-BAPI-TIMESTAMP': timestamp,
         'X-BAPI-RECV-WINDOW': recvWindow,
         'X-BAPI-SIGN': signature
-      }
+      },
+      signal
     });
   }
   const baseUrl = getBaseUrl(settings.exchange);
-  return signedGetFromBase<T>(baseUrl, path, settings, params);
+  return signedGetFromBase<T>(baseUrl, path, settings, params, signal);
 };
 
 const signedGetFromBase = async <T>(
@@ -135,6 +141,14 @@ type BinanceExchangeInfoResponse = {
 
 type BinanceFuturesAccountResponse = {
   totalWalletBalance: string;
+};
+
+type BinanceFuturesPositionRisk = {
+  symbol: string;
+  positionAmt: string;
+  entryPrice: string;
+  markPrice: string;
+  unRealizedProfit: string;
 };
 
 type BinanceFuturesIncome = {
@@ -311,23 +325,59 @@ export const fetchDashboardData = async (settings: Settings): Promise<DashboardD
   const totalBalance = spotBalance + futuresBalance;
   const accountBalance = totalBalance;
 
-  const runningTrades: RunningTrade[] = openOrders
-    .map((order) => {
-      const entryPrice = Number(order.price);
-      const positionSize = Number(order.origQty);
-      const currentPrice = tickerMap.get(order.symbol) ?? entryPrice;
-      const direction = order.side === 'BUY' ? 1 : -1;
-      const pnl = (currentPrice - entryPrice) * positionSize * direction;
+  let runningTrades: RunningTrade[] = [];
 
-      return {
-        symbol: order.symbol,
-        entryPrice,
-        currentPrice,
-        pnl,
-        positionSize
-      };
-    })
-    .filter((t) => Number.isFinite(t.positionSize) && t.positionSize > 0);
+  if (settings.exchange === 'binance' && futuresBaseUrl) {
+    try {
+      const positions = await signedGetFromBase<BinanceFuturesPositionRisk[]>(
+        futuresBaseUrl,
+        '/fapi/v2/positionRisk',
+        settings
+      );
+      runningTrades = positions
+        .map((p) => {
+          const rawAmt = Number(p.positionAmt);
+          const positionSize = Math.abs(rawAmt);
+          const entryPrice = Number(p.entryPrice);
+          const currentPrice = Number(p.markPrice || p.entryPrice);
+          const direction = rawAmt >= 0 ? 1 : -1;
+          const fallbackPnl = (currentPrice - entryPrice) * positionSize * direction;
+          const pnl = Number.isFinite(Number(p.unRealizedProfit)) ? Number(p.unRealizedProfit) : fallbackPnl;
+
+          return {
+            symbol: p.symbol,
+            entryPrice,
+            currentPrice,
+            pnl,
+            positionSize
+          };
+        })
+        .filter((t) => Number.isFinite(t.positionSize) && t.positionSize > 0);
+    } catch {
+      // If futures positions fail, we fall back to spot open orders below.
+      runningTrades = [];
+    }
+  }
+
+  if (!runningTrades.length) {
+    runningTrades = openOrders
+      .map((order) => {
+        const entryPrice = Number(order.price);
+        const positionSize = Number(order.origQty);
+        const currentPrice = tickerMap.get(order.symbol) ?? entryPrice;
+        const direction = order.side === 'BUY' ? 1 : -1;
+        const pnl = (currentPrice - entryPrice) * positionSize * direction;
+
+        return {
+          symbol: order.symbol,
+          entryPrice,
+          currentPrice,
+          pnl,
+          positionSize
+        };
+      })
+      .filter((t) => Number.isFinite(t.positionSize) && t.positionSize > 0);
+  }
 
   return { accountBalance, spotBalance, futuresBalance, totalBalance, futuresAvailable, runningTrades };
 };

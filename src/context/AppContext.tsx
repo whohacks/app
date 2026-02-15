@@ -1,19 +1,18 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Settings, Trade } from '../models/types';
+import { Settings, Trade } from '../models/types';
 import { loadSettingsSecure, saveSettingsSecure } from '../services/settingsService';
 import { DEFAULT_CATEGORIES, STORAGE_KEY } from '../utils/constants';
 
 type AppState = {
   trades: Trade[];
-  alerts: Alert[];
   categories: string[];
+  categoryColors: Record<string, string>;
   settings: Settings;
   hydrated: boolean;
 };
 
 type AddTradeInput = Omit<Trade, 'id' | 'pnl'> & { pnl?: number };
-type AddAlertInput = Omit<Alert, 'id' | 'status' | 'createdAt'>;
 
 type AppAction =
   | { type: 'HYDRATE'; payload: AppState }
@@ -21,37 +20,33 @@ type AppAction =
   | { type: 'ADD_TRADE'; payload: AddTradeInput }
   | { type: 'IMPORT_TRADES'; payload: Trade[] }
   | { type: 'UPDATE_TRADE_CATEGORY'; payload: { id: string; category: string } }
+  | { type: 'UPDATE_TRADE_DETAILS'; payload: { id: string; notes?: string; imageUri?: string | null } }
   | { type: 'DELETE_TRADE'; payload: string }
-  | { type: 'ADD_ALERT'; payload: AddAlertInput }
-  | { type: 'DELETE_ALERT'; payload: string }
-  | { type: 'MARK_ALERT_TRIGGERED'; payload: { id: string; triggeredAt: string } }
   | { type: 'UPSERT_CATEGORY'; payload: string }
+  | { type: 'UPDATE_CATEGORY_COLOR'; payload: { category: string; color: string } }
   | { type: 'DELETE_CATEGORY'; payload: string }
   | { type: 'UPSERT_SETTINGS'; payload: Partial<Settings> }
+  | { type: 'CLEAR_TRADES' }
   | { type: 'CLEAR_ALL' };
 
 const defaultSettings: Settings = {
   exchange: 'binance',
   exchangeApiKey: '',
-  exchangeApiSecret: '',
-  telegramBotToken: '',
-  telegramChatId: '',
-  alertServerUrl: '',
-  alertServerApiKey: ''
+  exchangeApiSecret: ''
 };
 
 const initialState: AppState = {
   trades: [],
-  alerts: [],
   categories: DEFAULT_CATEGORIES,
+  categoryColors: {},
   settings: defaultSettings,
   hydrated: false
 };
 
 type PersistedState = {
   trades: Trade[];
-  alerts: Alert[];
   categories: string[];
+  categoryColors?: Record<string, string>;
 };
 
 const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -75,7 +70,17 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const merged = new Map(state.trades.map((t) => [t.id, t]));
         action.payload.forEach((trade) => {
           const existing = merged.get(trade.id);
-          merged.set(trade.id, existing ? { ...existing, ...trade, category: existing.category } : trade);
+          merged.set(
+            trade.id,
+            existing
+              ? {
+                  ...trade,
+                  category: existing.category,
+                  notes: existing.notes ?? trade.notes,
+                  imageUri: existing.imageUri ?? trade.imageUri
+                }
+              : trade
+          );
         });
         const trades = Array.from(merged.values()).sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -89,38 +94,44 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
           t.id === action.payload.id ? { ...t, category: action.payload.category } : t
         )
       };
-    case 'DELETE_TRADE':
-      return { ...state, trades: state.trades.filter((t) => t.id !== action.payload) };
-    case 'ADD_ALERT': {
-      const alert: Alert = {
-        ...action.payload,
-        id: createId(),
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
-      return { ...state, alerts: [alert, ...state.alerts] };
-    }
-    case 'DELETE_ALERT':
-      return { ...state, alerts: state.alerts.filter((a) => a.id !== action.payload) };
-    case 'MARK_ALERT_TRIGGERED':
+    case 'UPDATE_TRADE_DETAILS':
       return {
         ...state,
-        alerts: state.alerts.map((a) =>
-          a.id === action.payload.id ? { ...a, status: 'triggered', triggeredAt: action.payload.triggeredAt } : a
-        )
+        trades: state.trades.map((t) => {
+          if (t.id !== action.payload.id) return t;
+          return {
+            ...t,
+            ...(Object.prototype.hasOwnProperty.call(action.payload, 'notes')
+              ? { notes: action.payload.notes }
+              : null),
+            ...(Object.prototype.hasOwnProperty.call(action.payload, 'imageUri')
+              ? { imageUri: action.payload.imageUri ?? undefined }
+              : null)
+          };
+        })
       };
+    case 'DELETE_TRADE':
+      return { ...state, trades: state.trades.filter((t) => t.id !== action.payload) };
+    case 'CLEAR_TRADES':
+      return { ...state, trades: [] };
     case 'UPSERT_CATEGORY':
       return state.categories.includes(action.payload)
         ? state
         : { ...state, categories: [...state.categories, action.payload] };
+    case 'UPDATE_CATEGORY_COLOR':
+      return {
+        ...state,
+        categoryColors: { ...state.categoryColors, [action.payload.category]: action.payload.color }
+      };
     case 'DELETE_CATEGORY': {
       const category = action.payload;
       if (!state.categories.includes(category)) return state;
       const categories = state.categories.filter((c) => c !== category);
+      const { [category]: _removed, ...rest } = state.categoryColors;
       const trades = state.trades.map((t) =>
         t.category === category ? { ...t, category: '' } : t
       );
-      return { ...state, categories, trades };
+      return { ...state, categories, categoryColors: rest, trades };
     }
     case 'UPSERT_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
@@ -156,8 +167,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             ...initialState,
             hydrated: true,
             trades: parsed?.trades ?? [],
-            alerts: parsed?.alerts ?? [],
             categories: parsed?.categories?.length ? parsed.categories : DEFAULT_CATEGORIES,
+            categoryColors: parsed?.categoryColors ?? {},
             settings: { ...defaultSettings, ...secureSettings }
           }
         });
@@ -177,8 +188,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const persisted: PersistedState = {
           trades: state.trades,
-          alerts: state.alerts,
-          categories: state.categories
+          categories: state.categories,
+          categoryColors: state.categoryColors
         };
         await Promise.all([
           AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(persisted)),

@@ -1,26 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Menu, Text, TextInput } from 'react-native-paper';
 import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { testBinanceConnection } from '../services/binanceService';
-import { clearSettingsSecure } from '../services/settingsService';
-import { testTelegramConnection } from '../services/telegramService';
-import { STORAGE_KEY } from '../utils/constants';
 
 export const SettingsScreen = () => {
   const { state, dispatch } = useAppContext();
-  const { hasPasscode, lockApp, changePasscode, removePasscode } = useAuth();
+  const { hasPasscode, changePasscode, removePasscode } = useAuth();
 
   const [exchangeMenuVisible, setExchangeMenuVisible] = useState(false);
-  const [loading, setLoading] = useState<'exchange' | 'telegram' | null>(null);
+  const [loading, setLoading] = useState<'exchange' | null>(null);
   const [exchangeConnection, setExchangeConnection] = useState<{
-    status: 'idle' | 'success' | 'error';
-  }>({ status: 'idle' });
-  const [telegramConnection, setTelegramConnection] = useState<{
     status: 'idle' | 'success' | 'error';
   }>({ status: 'idle' });
   const [showChangePin, setShowChangePin] = useState(false);
@@ -36,7 +29,6 @@ export const SettingsScreen = () => {
     []
   );
   const hasExchangeCreds = !!state.settings.exchangeApiKey && !!state.settings.exchangeApiSecret;
-  const hasTelegramCreds = !!state.settings.telegramBotToken && !!state.settings.telegramChatId;
 
   const getStatusMeta = (status: 'idle' | 'success' | 'error', hasCreds: boolean) => {
     if (status === 'error') {
@@ -49,14 +41,19 @@ export const SettingsScreen = () => {
   };
 
   const exchangeStatus = getStatusMeta(exchangeConnection.status, hasExchangeCreds);
-  const telegramStatus = getStatusMeta(telegramConnection.status, hasTelegramCreds);
+  const inputTheme = {
+    colors: {
+      background: '#0F1419',
+      outline: '#1E293B',
+      primary: '#7C3AED',
+      onSurface: '#E2E8F0',
+      onSurfaceVariant: '#64748B'
+    },
+    roundness: 12
+  };
 
   const updateSetting = (
-    key:
-      | 'exchangeApiKey'
-      | 'exchangeApiSecret'
-      | 'telegramBotToken'
-      | 'telegramChatId',
+    key: 'exchangeApiKey' | 'exchangeApiSecret',
     value: string
   ) => {
     dispatch({ type: 'UPSERT_SETTINGS', payload: { [key]: value } });
@@ -66,66 +63,17 @@ export const SettingsScreen = () => {
     setLoading('exchange');
     try {
       await testBinanceConnection(state.settings);
-      setExchangeConnection({
-        status: 'success'
-      });
-    } catch (e) {
-      setExchangeConnection({
-        status: 'error'
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const onTestTelegram = async () => {
-    setLoading('telegram');
-    try {
-      await testTelegramConnection(state.settings.telegramBotToken, state.settings.telegramChatId);
-      setTelegramConnection({
-        status: 'success'
-      });
-    } catch (e) {
-      setTelegramConnection({
-        status: 'error'
-      });
+      setExchangeConnection({ status: 'success' });
+    } catch {
+      setExchangeConnection({ status: 'error' });
     } finally {
       setLoading(null);
     }
   };
 
   const onDisconnectExchange = () => {
-    dispatch({
-      type: 'UPSERT_SETTINGS',
-      payload: { exchangeApiKey: '', exchangeApiSecret: '' }
-    });
-    setExchangeConnection({
-      status: 'idle'
-    });
-  };
-
-  const onDisconnectTelegram = () => {
-    dispatch({
-      type: 'UPSERT_SETTINGS',
-      payload: { telegramBotToken: '', telegramChatId: '' }
-    });
-    setTelegramConnection({
-      status: 'idle'
-    });
-  };
-
-  const onClearAll = () => {
-    Alert.alert('Clear all data?', 'This removes all trades, alerts, categories, and saved keys.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clear',
-        style: 'destructive',
-        onPress: async () => {
-          await Promise.all([AsyncStorage.removeItem(STORAGE_KEY), clearSettingsSecure()]);
-          dispatch({ type: 'CLEAR_ALL' });
-        }
-      }
-    ]);
+    dispatch({ type: 'UPSERT_SETTINGS', payload: { exchangeApiKey: '', exchangeApiSecret: '' } });
+    setExchangeConnection({ status: 'idle' });
   };
 
   const onChangePin = async () => {
@@ -167,7 +115,7 @@ export const SettingsScreen = () => {
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.panel}>
-          <Card.Title title="Connect Exchange" subtitle="Select exchange matching your API keys" />
+          <Card.Title title="Connect Exchange" />
           <Card.Content>
             <Menu
               visible={exchangeMenuVisible}
@@ -204,6 +152,7 @@ export const SettingsScreen = () => {
               mode="outlined"
               autoCapitalize="none"
               style={styles.input}
+              theme={inputTheme}
             />
             <TextInput
               label="Secret Key"
@@ -213,6 +162,7 @@ export const SettingsScreen = () => {
               secureTextEntry
               autoCapitalize="none"
               style={styles.input}
+              theme={inputTheme}
             />
 
             <HelperText type="info">{securityWarning}</HelperText>
@@ -221,67 +171,18 @@ export const SettingsScreen = () => {
                 mode="contained"
                 loading={loading === 'exchange'}
                 onPress={onTestExchange}
-                buttonColor="#8b7cf6"
+                buttonColor="#7C3AED"
                 compact
                 style={styles.actionButton}
+                contentStyle={styles.btnContent}
               >
                 Connect
               </Button>
-              <Button mode="outlined" onPress={onDisconnectExchange} compact style={styles.actionButton}>
+              <Button mode="outlined" onPress={onDisconnectExchange} compact style={styles.actionButton} contentStyle={styles.btnContent}>
                 Disconnect
               </Button>
-              <View
-                style={[
-                  styles.statusChip,
-                  exchangeStatus.bgStyle
-                ]}
-              >
+              <View style={[styles.statusChip, exchangeStatus.bgStyle]}>
                 <Text style={exchangeStatus.textStyle}>{exchangeStatus.label}</Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.panel}>
-          <Card.Title title="Connect Telegram" />
-          <Card.Content>
-            <TextInput
-              label="Bot Token"
-              value={state.settings.telegramBotToken}
-              onChangeText={(v) => updateSetting('telegramBotToken', v.trim())}
-              mode="outlined"
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            <TextInput
-              label="Chat ID"
-              value={state.settings.telegramChatId}
-              onChangeText={(v) => updateSetting('telegramChatId', v.trim())}
-              mode="outlined"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <View style={styles.actionRow}>
-              <Button
-                mode="contained"
-                loading={loading === 'telegram'}
-                onPress={onTestTelegram}
-                buttonColor="#8b7cf6"
-                compact
-                style={styles.actionButton}
-              >
-                Connect
-              </Button>
-              <Button mode="outlined" onPress={onDisconnectTelegram} compact style={styles.actionButton}>
-                Disconnect
-              </Button>
-              <View
-                style={[
-                  styles.statusChip,
-                  telegramStatus.bgStyle
-                ]}
-              >
-                <Text style={telegramStatus.textStyle}>{telegramStatus.label}</Text>
               </View>
             </View>
           </Card.Content>
@@ -290,29 +191,34 @@ export const SettingsScreen = () => {
         <Card style={styles.panel}>
           <Card.Title title="App" />
           <Card.Content>
-            <View style={styles.pinActionRow}>
-              <Button mode="outlined" onPress={lockApp} style={styles.pinActionButton}>
-                Lock App
-              </Button>
-              <Button mode="outlined" textColor="#ef4444" onPress={onClearAll} style={styles.pinActionButton}>
-                Clear Data
-              </Button>
-            </View>
+            <View style={styles.pinActionRow} />
+
             {hasPasscode ? (
               <>
                 <View style={styles.pinActionRow}>
-                  <Button mode="outlined" onPress={() => {
-                    setPinError(null);
-                    setShowRemovePin(false);
-                    setShowChangePin((v) => !v);
-                  }} style={styles.pinActionButton}>
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      setPinError(null);
+                      setShowRemovePin(false);
+                      setShowChangePin((v) => !v);
+                    }}
+                    style={styles.pinActionButton}
+                    contentStyle={styles.btnContent}
+                  >
                     Change PIN
                   </Button>
-                  <Button mode="outlined" textColor="#ef4444" onPress={() => {
-                    setPinError(null);
-                    setShowChangePin(false);
-                    setShowRemovePin((v) => !v);
-                  }} style={styles.pinActionButton}>
+                  <Button
+                    mode="outlined"
+                    textColor="#ef4444"
+                    onPress={() => {
+                      setPinError(null);
+                      setShowChangePin(false);
+                      setShowRemovePin((v) => !v);
+                    }}
+                    style={styles.pinActionButton}
+                    contentStyle={styles.btnContent}
+                  >
                     Remove PIN
                   </Button>
                 </View>
@@ -326,6 +232,7 @@ export const SettingsScreen = () => {
                       mode="outlined"
                       secureTextEntry
                       autoCapitalize="none"
+                      theme={inputTheme}
                     />
                     <TextInput
                       label="New PIN"
@@ -335,6 +242,7 @@ export const SettingsScreen = () => {
                       secureTextEntry
                       autoCapitalize="none"
                       style={styles.input}
+                      theme={inputTheme}
                     />
                     <TextInput
                       label="Confirm New PIN"
@@ -344,8 +252,9 @@ export const SettingsScreen = () => {
                       secureTextEntry
                       autoCapitalize="none"
                       style={styles.input}
+                      theme={inputTheme}
                     />
-                    <Button mode="contained" onPress={onChangePin} style={styles.appButton} buttonColor="#8b7cf6">
+                    <Button mode="contained" onPress={onChangePin} style={styles.appButton} contentStyle={styles.btnContent} buttonColor="#7C3AED">
                       Save New PIN
                     </Button>
                   </View>
@@ -360,8 +269,9 @@ export const SettingsScreen = () => {
                       mode="outlined"
                       secureTextEntry
                       autoCapitalize="none"
+                      theme={inputTheme}
                     />
-                    <Button mode="outlined" textColor="#ef4444" onPress={onRemovePin} style={styles.appButton}>
+                    <Button mode="outlined" textColor="#ef4444" onPress={onRemovePin} style={styles.appButton} contentStyle={styles.btnContent}>
                       Confirm Remove PIN
                     </Button>
                   </View>
@@ -379,28 +289,39 @@ export const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 24, gap: 12 },
-  panel: { backgroundColor: '#111827', borderWidth: 1, borderColor: '#283349' },
-  input: { marginTop: 10 },
-  actionRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  content: { paddingBottom: 32, gap: 24 },
+  panel: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6
+  },
+  input: { marginTop: 16, minHeight: 48, backgroundColor: '#0F1419' },
+  actionRow: { marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
   actionButton: { flex: 1 },
+  btnContent: { height: 48 },
   statusChip: {
     borderWidth: 1,
     borderColor: '#2a3448',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6
+    paddingHorizontal: 12,
+    paddingVertical: 7
   },
   statusOkBg: { backgroundColor: 'rgba(34,197,94,0.1)' },
   statusBadBg: { backgroundColor: 'rgba(239,68,68,0.1)' },
   statusNeutralBg: { backgroundColor: 'rgba(148,163,184,0.1)' },
-  appButton: { marginTop: 10 },
-  pinActionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  appButton: { marginTop: 10, borderRadius: 14 },
+  pinActionRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   pinActionButton: { flex: 1 },
-  pinBox: { marginTop: 8 },
+  pinBox: { marginTop: 12 },
   pinError: { color: '#ef4444', marginTop: 8 },
   ok: { color: '#22c55e' },
   bad: { color: '#ef4444' },
   neutral: { color: '#94a3b8' },
-  version: { marginTop: 14, color: '#94a3b8', textAlign: 'center' }
+  version: { marginTop: 16, color: '#64748B', textAlign: 'center', fontSize: 12 }
 });

@@ -2,19 +2,29 @@ import React from 'react';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DashboardScreen } from '../screens/DashboardScreen';
-import { AlertsScreen } from '../screens/AlertsScreen';
 import { JournalScreen } from '../screens/JournalScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { AnalyticsScreen } from '../screens/AnalyticsScreen';
+import { CalendarScreen } from '../screens/CalendarScreen';
+import { CalendarDayScreen } from '../screens/CalendarDayScreen';
 
 export type RootTabParamList = {
   Dashboard: undefined;
-  Alerts: undefined;
+  Analytics: undefined;
+  Calendar: undefined;
   Journal: undefined;
   Settings: undefined;
 };
 
+export type RootStackParamList = {
+  Tabs: undefined;
+  CalendarDay: { date: string };
+};
+
 const Tab = createBottomTabNavigator<RootTabParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const navTheme = {
@@ -29,45 +39,66 @@ const navTheme = {
   }
 };
 
+const Tabs = () => (
+  <Tab.Navigator
+    screenOptions={({ route }) => ({
+      headerTitleAlign: 'left',
+      headerStyle: {
+        backgroundColor: '#0f1726'
+      },
+      headerTintColor: '#e7ecf7',
+      headerTitleStyle: {
+        fontWeight: '700'
+      },
+      tabBarStyle: {
+        backgroundColor: '#0a0e14',
+        borderTopColor: '#1a2332',
+        borderTopWidth: 1,
+        height: 72,
+        paddingBottom: 10,
+        paddingTop: 8
+      },
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: '600'
+      },
+      tabBarActiveTintColor: '#8b7cf6',
+      tabBarInactiveTintColor: '#64748B',
+      tabBarIcon: ({ color }) => {
+        const icons: Record<keyof RootTabParamList, IconName> = {
+          Dashboard: 'view-dashboard-outline',
+          Journal: 'book-open-page-variant-outline',
+          Analytics: 'chart-bar',
+          Calendar: 'calendar-month-outline',
+          Settings: 'cog-outline'
+        };
+
+        return <MaterialCommunityIcons name={icons[route.name]} size={24} color={color} />;
+      }
+    })}
+  >
+    <Tab.Screen name="Dashboard" component={DashboardScreen} />
+    <Tab.Screen name="Journal" component={JournalScreen} />
+    <Tab.Screen name="Analytics" component={AnalyticsScreen} />
+    <Tab.Screen name="Calendar" component={CalendarScreen} />
+    <Tab.Screen name="Settings" component={SettingsScreen} />
+  </Tab.Navigator>
+);
+
 export const AppNavigator = () => {
   return (
     <NavigationContainer theme={navTheme}>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerTitleAlign: 'left',
-          headerStyle: {
-            backgroundColor: '#0f1726'
-          },
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: '#0f1726' },
           headerTintColor: '#e7ecf7',
-          headerTitleStyle: {
-            fontWeight: '700'
-          },
-          tabBarStyle: {
-            backgroundColor: '#0f1726',
-            borderTopColor: '#222c3f',
-            height: 62,
-            paddingBottom: 6,
-            paddingTop: 6
-          },
-          tabBarActiveTintColor: '#8b7cf6',
-          tabBarInactiveTintColor: '#8ea1c1',
-          tabBarIcon: ({ color, size }) => {
-            const icons: Record<keyof RootTabParamList, IconName> = {
-              Dashboard: 'view-dashboard-outline',
-              Alerts: 'bell-outline',
-              Journal: 'book-open-page-variant-outline',
-              Settings: 'cog-outline'
-            };
-
-            return <MaterialCommunityIcons name={icons[route.name]} size={size} color={color} />;
-          }
-        })}
+          headerTitleStyle: { fontWeight: '700' },
+          headerTitleAlign: 'left'
+        }}
       >
-        <Tab.Screen name="Dashboard" component={DashboardScreen} />
-        <Tab.Screen name="Alerts" component={AlertsScreen} />
-        <Tab.Screen name="Journal" component={JournalScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
-      </Tab.Navigator>
+        <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+        <Stack.Screen name="CalendarDay" component={CalendarDayScreen} options={{ title: 'Trades' }} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 };

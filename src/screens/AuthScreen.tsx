@@ -44,10 +44,9 @@ export const AuthScreen = () => {
     <ScreenContainer>
       <View style={styles.wrap}>
         <Card style={styles.card}>
-          <Card.Title
-            title={hasPasscode ? 'Sign In' : 'Set Passcode'}
-            subtitle={hasPasscode ? 'Unlock your trading journal' : 'Create a passcode to protect app access'}
-          />
+          {!hasPasscode ? (
+            <Card.Title title="Set Passcode" subtitle="Create a passcode to protect app access" />
+          ) : null}
           <Card.Content>
             <TextInput
               mode="outlined"
@@ -73,7 +72,7 @@ export const AuthScreen = () => {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Button mode="contained" onPress={onSubmit} loading={loading} style={styles.button} buttonColor="#8b7cf6">
-              {hasPasscode ? 'Sign In' : 'Save Passcode'}
+              {hasPasscode ? 'Continue' : 'Save Passcode'}
             </Button>
           </Card.Content>
         </Card>
@@ -84,8 +83,8 @@ export const AuthScreen = () => {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'center' },
-  card: { backgroundColor: '#111827', borderColor: '#283349', borderWidth: 1 },
+  card: { backgroundColor: '#111827', borderColor: '#283349', borderWidth: 1, borderRadius: 8 },
   input: { marginTop: 10 },
-  button: { marginTop: 14 },
+  button: { marginTop: 14, borderRadius: 8, paddingVertical: 4 },
   error: { marginTop: 8, color: '#ef4444' }
 });

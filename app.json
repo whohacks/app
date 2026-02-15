@@ -5,18 +5,38 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.tradingjournal",
       "infoPlist": {
-        "UIBackgroundModes": ["fetch"]
+        "UIBackgroundModes": [
+          "fetch"
+        ]
       }
     },
     "android": {
       "package": "com.example.tradingjournal",
-      "permissions": ["RECEIVE_BOOT_COMPLETED"]
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "statusBar": {
+        "backgroundColor": "#0A0E14"
+      },
+      "navigationBar": {
+        "backgroundColor": "#0A0E14",
+        "barStyle": "light-content"
+      }
     },
-    "plugins": ["expo-secure-store", "expo-notifications"]
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2c447aae-28cd-4151-aaf5-ca7a3cdaea92"
+      }
+    }
   }
 }
